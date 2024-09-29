@@ -13,19 +13,11 @@ namespace Super_Candy_Plugin
 {
     public class EventHandler
     {
-        private static string[] info = new string[2]
-        {
-            "DynamicInvisibility:false",
-            "Female:false"
-        };
         private static Dictionary<int, Dictionary<string, int>> PowerIntensities = new Dictionary<int, Dictionary<string, int>>();
         private static Dictionary<string, int> DefaultPowerIntensities = new Dictionary<string, int>
         {
             {
                 "DynamicInvisibility", 0
-            },
-            {
-                "Female", 0
             },
             {
                 "Hacker", 0
@@ -111,6 +103,7 @@ namespace Super_Candy_Plugin
 
         internal static void PlayerChangingMoveState(ChangingMoveStateEventArgs ev)
         {
+            if (Round.IsLobby) return;
             if (PowerIntensities[ev.Player.Id]["DynamicInvisibility"] > 0)
             {
                 if (ev.NewState == PlayerRoles.FirstPersonControl.PlayerMovementState.Sneaking)
@@ -131,29 +124,13 @@ namespace Super_Candy_Plugin
 
         internal static void PlayerSpawning(SpawningEventArgs ev)
         {
-            if (!(ev.Player.Role.Type == PlayerRoles.RoleTypeId.NtfSpecialist || ev.Player.Role.Type == PlayerRoles.RoleTypeId.ChaosConscript))
-            {
-                ResetPlayerStats(ev.Player);
+            if (Round.IsLobby)
+                return;
 
-                if (Random.Next(2) == 0)
-                {
-                    PowerIntensities[ev.Player.Id]["Female"] = 1;
-                    ev.Player.Broadcast(5, "You are female.");
-                    Timing.CallDelayed(0.1f, () =>
-                    {
-                        ev.Player.EnableEffect(EffectType.SilentWalk, intensity: (byte)((byte)5 * PowerIntensities[ev.Player.Id]["Stealthy"]));
-                        Femalification(ev.Player);
-                    });
-                }
-            }
-            else
+            if (!(ev.Player.Role.Type != PlayerRoles.RoleTypeId.NtfSpecialist || ev.Player.Role.Type != PlayerRoles.RoleTypeId.ChaosConscript))
             {
                 ev.Player.MaxHealth += 10 * PowerIntensities[ev.Player.Id]["Tank"];
                 ev.Player.Health = ev.Player.MaxHealth;
-                Timing.CallDelayed(0.1f, () =>
-                {
-                    Femalification(ev.Player);
-                });
             }
         }
 
@@ -162,17 +139,8 @@ namespace Super_Candy_Plugin
             int power;
             if (ev.Candy.Kind == InventorySystem.Items.Usables.Scp330.CandyKindID.Rainbow)
             {
-                power = Random.Next(2);
-                if (power == 0)
-                {
-                    PowerIntensities[ev.Player.Id]["Female"] += 1;
-                    Femalification(ev.Player);
-                }
-                else if (power == 1)
-                {
-                    PowerIntensities[ev.Player.Id]["Stealthy"] += 1;
-                    ev.Player.EnableEffect(EffectType.SilentWalk, (byte)((byte)5 * PowerIntensities[ev.Player.Id]["Stealthy"]));
-                }
+                PowerIntensities[ev.Player.Id]["Stealthy"] += 1;
+                ev.Player.EnableEffect(EffectType.SilentWalk, (byte)((byte)5 * PowerIntensities[ev.Player.Id]["Stealthy"]));
             }
             else if (ev.Candy.Kind == InventorySystem.Items.Usables.Scp330.CandyKindID.Yellow)
             {
@@ -214,13 +182,6 @@ namespace Super_Candy_Plugin
             {
                 PowerIntensities[ev.Player.Id]["Hacker"] += 1;
             }
-        }
-
-        private static void Femalification(Player player)
-        {
-            player.EnableEffect(EffectType.Scp1853);
-            byte movementIntensity = (byte)((byte)5 * PowerIntensities[player.Id]["Female"] + player.GetEffect(EffectType.MovementBoost).Intensity);
-            player.EnableEffect(EffectType.MovementBoost, intensity: movementIntensity);
         }
     }
 }
