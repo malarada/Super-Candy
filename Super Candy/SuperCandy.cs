@@ -2,7 +2,9 @@
 
 using Exiled.API.Features;
 
-namespace Super_Candy_Plugin
+using SuperCandy.API;
+
+namespace SuperCandy
 {
     public class SuperCandyPlugin : Plugin<Config>
     {
@@ -12,9 +14,16 @@ namespace Super_Candy_Plugin
         public override Version Version => new Version(1, 0, 0);
         public override Version RequiredExiledVersion => new Version(8, 11, 0);
 
+        public static SuperCandyPlugin Instance { get; private set; }
+
         public override void OnEnabled()
         {
+            Instance = this;
+
             CustomEvents.SubscribeEvents();
+
+            CustomPower.RegisterPowers();
+            CustomUltimate.RegisterUltimates();
 
             base.OnEnabled();
         }

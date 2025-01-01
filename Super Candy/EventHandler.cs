@@ -1,187 +1,105 @@
-﻿using Exiled.API.Enums;
-using Exiled.API.Features;
+﻿using Exiled.API.Features;
 using Exiled.Events.EventArgs.Player;
 using Exiled.Events.EventArgs.Scp330;
-using InventorySystem;
+using PlayerRoles;
+using SuperCandy.API;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
-using UnityEngine;
-
-using MEC;
-
-namespace Super_Candy_Plugin
+namespace SuperCandy
 {
-    public class EventHandler
+    internal class EventHandler
     {
-        private static Dictionary<int, Dictionary<string, int>> PowerIntensities = new Dictionary<int, Dictionary<string, int>>();
-        private static Dictionary<string, int> DefaultPowerIntensities = new Dictionary<string, int>
-        {
-            {
-                "DynamicInvisibility", 0
-            },
-            {
-                "Hacker", 0
-            },
-            {
-                "Tank", 0
-            },
-            {
-                "Wraith", 0
-            },
-            {
-                "Stealthy", 0
-            },
-            {
-                "Slow", 0
-            },
-            {
-                "Healing", 0
-            },
-            {
-                "Speed", 0
-            },
-        };
-        private static System.Random Random = new System.Random();
-
-        private static void ResetPlayerStats(Player player)
-        {
-            if (!PowerIntensities.ContainsKey(player.Id))
-            {
-                PowerIntensities.Add(player.Id, new Dictionary<string, int>());
-                foreach (var kvp in DefaultPowerIntensities)
-                {
-                    PowerIntensities[player.Id].Add(kvp.Key, kvp.Value);
-                }
-            }
-        }
-
         internal static void PlayerVerified(VerifiedEventArgs ev)
         {
-            ResetPlayerStats(ev.Player);
-        }
-
-        public static Dictionary<int, Dictionary<ushort, InventorySystem.Items.ItemBase>> PlayerItems = new Dictionary<int, Dictionary<ushort, InventorySystem.Items.ItemBase>>();
-        public static Dictionary<int, Dictionary<ItemType, ushort>> PlayerAmmo = new Dictionary<int, Dictionary<ItemType, ushort>>();
-
-        internal static void TogglingNoClip(TogglingNoClipEventArgs ev)
-        {
-            if (PowerIntensities[ev.Player.Id]["Wraith"] > 0)
+            Wizard.List.Add(new Wizard()
             {
-                ev.Player.EnableEffect(EffectType.Ghostly, duration: 5);
-                if (!PlayerItems.ContainsKey(ev.Player.Id))
-                    PlayerItems.Add(ev.Player.Id, new Dictionary<ushort, InventorySystem.Items.ItemBase>());
-                else
-                    PlayerItems[ev.Player.Id].Clear();
-                foreach (var kvp in ev.Player.Inventory.UserInventory.Items)
-                {
-                    PlayerItems[ev.Player.Id].Add(kvp.Key, kvp.Value);
-                }
-                if (!PlayerAmmo.ContainsKey(ev.Player.Id))
-                    PlayerAmmo.Add(ev.Player.Id, new Dictionary<ItemType, ushort>());
-                else
-                    PlayerAmmo[ev.Player.Id].Clear();
-                foreach (var kvp in ev.Player.Inventory.UserInventory.ReserveAmmo)
-                {
-                    PlayerAmmo[ev.Player.Id].Add(kvp.Key, kvp.Value);
-                }
-                ev.Player.ClearInventory();
-                ev.Player.Handcuff();
-                Timing.CallDelayed(5, () =>
-                {
-                    ev.Player.RemoveHandcuffs();
-                    foreach (var kvp in EventHandler.PlayerItems[ev.Player.Id])
-                    {
-                        ev.Player.Inventory.ServerAddItem(kvp.Value.ItemTypeId);
-                    }
-                    foreach (var kvp in EventHandler.PlayerAmmo[ev.Player.Id])
-                    {
-                        ev.Player.Inventory.UserInventory.ReserveAmmo.Add(kvp.Key, kvp.Value);
-                    }
-                });
-            }
-        }
-
-        internal static void PlayerChangingMoveState(ChangingMoveStateEventArgs ev)
-        {
-            if (Round.IsLobby) return;
-            if (PowerIntensities[ev.Player.Id]["DynamicInvisibility"] > 0)
-            {
-                if (ev.NewState == PlayerRoles.FirstPersonControl.PlayerMovementState.Sneaking)
-                {
-                    ev.Player.EnableEffect(EffectType.Invisible, intensity: (byte)PowerIntensities[ev.Player.Id]["DynamicInvisibility"]);
-                }
-                else if (ev.OldState == PlayerRoles.FirstPersonControl.PlayerMovementState.Sneaking)
-                {
-                    ev.Player.DisableEffect(EffectType.Invisible);
-                }
-            }
-        }
-
-        internal static void PlayerActivatingGenerator(ActivatingGeneratorEventArgs ev)
-        {
-            ev.Generator.ActivationTime = 120 / (PowerIntensities[ev.Player.Id]["Hacker"] + 1) + 4;
+                Player = ev.Player,
+                Powers = new List<CustomPower>()
+            });
         }
 
         internal static void PlayerSpawning(SpawningEventArgs ev)
         {
-            if (Round.IsLobby)
-                return;
+            if (Wizard.TryGet(ev.Player) == null)
+                Wizard.List.Add(new Wizard()
+                {
+                    Player = ev.Player,
+                    Powers = new List<CustomPower>()
+                });
 
-            if (!(ev.Player.Role.Type != PlayerRoles.RoleTypeId.NtfSpecialist || ev.Player.Role.Type != PlayerRoles.RoleTypeId.ChaosConscript))
+            Log.Debug($"Player: {ev.Player}");
+            if (ev.Player.Role != RoleTypeId.Spectator)
             {
-                ev.Player.MaxHealth += 10 * PowerIntensities[ev.Player.Id]["Tank"];
-                ev.Player.Health = ev.Player.MaxHealth;
+                Wizard.TryGet(ev.Player).Powers.Clear();
+            }
+
+            /*
+            Log.Debug($"Player role: {ev.Player.Role.Type}");
+            Log.Debug($"IsLobby: {Round.IsLobby}");
+            Log.Debug($"Is spectator: {ev.Player.Role.Type == RoleTypeId.Spectator}");
+            Log.Debug($"Was dead: {ev.OldRole.IsDead}");
+            Log.Debug($"Count: {Wizard.TryGet(ev.Player).Powers.Count}");
+            // When ev.OldRole is finally set to an instance, this is what should happen.
+            if (Round.IsLobby || ev.Player.Role.Type == RoleTypeId.Spectator) return;
+            if (!(SuperCandyPlugin.Instance.Config.KeepPowersOnEscape && !ev.OldRole.IsDead) && Wizard.TryGet(ev.Player).Powers.Count > 0)
+            {
+                Wizard.TryGet(ev.Player).Powers.Clear();
+            }
+            */
+        }
+
+        internal static void PlayerLeft(LeftEventArgs ev)
+        {
+            Wizard.List.Remove(Wizard.TryGet(ev.Player));
+        }
+        
+        internal static void ToggleNoClip(TogglingNoClipEventArgs ev)
+        {
+            foreach (CustomPower power in Wizard.TryGet(ev.Player).Powers)
+            {
+                if (power is CustomUltimate ultimate)
+                {
+                    if (!ultimate.CheckUltimate())
+                        continue;
+                }
+                power.OnSpecial(ev.Player);
             }
         }
 
-        internal static void EatenScp330(EatenScp330EventArgs ev)
+        internal static void Eaten330(EatenScp330EventArgs ev)
         {
-            int power;
-            if (ev.Candy.Kind == InventorySystem.Items.Usables.Scp330.CandyKindID.Rainbow)
+            List<CustomPower> colorPowers = CustomPower.Registered.Where(t => t.Candy == ev.Candy.Kind).ToList();
+
+            List<CustomPower> weightedPowers = new List<CustomPower>();
+
+            foreach (var colorPower in colorPowers)
             {
-                PowerIntensities[ev.Player.Id]["Stealthy"] += 1;
-                ev.Player.EnableEffect(EffectType.SilentWalk, (byte)((byte)5 * PowerIntensities[ev.Player.Id]["Stealthy"]));
-            }
-            else if (ev.Candy.Kind == InventorySystem.Items.Usables.Scp330.CandyKindID.Yellow)
-            {
-                PowerIntensities[ev.Player.Id]["DynamicInvisibility"] += 1;
-            }
-            else if (ev.Candy.Kind == InventorySystem.Items.Usables.Scp330.CandyKindID.Purple)
-            {
-                PowerIntensities[ev.Player.Id]["Wraith"] += 1;
-            }
-            else if (ev.Candy.Kind == InventorySystem.Items.Usables.Scp330.CandyKindID.Red)
-            {
-                power = Random.Next(2);
-                if (power == 0)
+                for (int i = 0; i < (int)colorPower.Rarity; i++)
                 {
-                    PowerIntensities[ev.Player.Id]["Tank"] += 1;
-                    ev.Player.MaxHealth += 10;
-                }
-                else if (power == 1)
-                {
-                    PowerIntensities[ev.Player.Id]["Speed"] += 1;
-                    ev.Player.EnableEffect(EffectType.Scp207);
+                    weightedPowers.Add(colorPower);
                 }
             }
-            else if (ev.Candy.Kind == InventorySystem.Items.Usables.Scp330.CandyKindID.Green)
+
+            Wizard wizard = Wizard.TryGet(ev.Player);
+            if (colorPowers.Count == 0) return;
+            Random random = new Random();
+            CustomPower power = weightedPowers[random.Next(weightedPowers.Count)];
+            CustomPower customPower;
+
+            if (!wizard.Powers.Contains(power))
             {
-                power = Random.Next(2);
-                if (power == 0)
-                {
-                    PowerIntensities[ev.Player.Id]["Slow"] += 1;
-                    ev.Player.EnableEffect(EffectType.AntiScp207);
-                }
-                else if (power == 1)
-                {
-                    PowerIntensities[ev.Player.Id]["Healing"] += 1;
-                    ev.Player.MaxArtificialHealth += 25;
-                }
+                customPower = power.Clone();
+                wizard.Powers.Add(customPower);
             }
-            else if (ev.Candy.Kind == InventorySystem.Items.Usables.Scp330.CandyKindID.Blue)
+            else
             {
-                PowerIntensities[ev.Player.Id]["Hacker"] += 1;
+                customPower = wizard.Powers.FirstOrDefault(t => t.Name == power.Name);
             }
+            customPower.IncreaseIntensity(ev.Player);
+
+            ev.Player.Broadcast(5, $"You gained {power.Name}.\n{power.Description}");
         }
     }
 }

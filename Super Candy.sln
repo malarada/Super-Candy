@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.10.35122.118
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Super Candy", "Super Candy\Super Candy.csproj", "{0168BD9D-83CB-4B38-B3F7-C5D1B7A40BB7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SuperCandy", "Super Candy\SuperCandy.csproj", "{0168BD9D-83CB-4B38-B3F7-C5D1B7A40BB7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
