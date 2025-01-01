@@ -12,7 +12,6 @@ namespace SuperCandy
         public override string Prefix => Name;
         public override string Author => "PyroCyclone";
         public override Version Version => new Version(1, 0, 0);
-        public override Version RequiredExiledVersion => new Version(8, 11, 0);
 
         public static SuperCandyPlugin Instance { get; private set; }
 
